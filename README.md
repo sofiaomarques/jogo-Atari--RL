@@ -67,6 +67,8 @@ Controles:
 - espaco: atirar
 - `R`: reiniciar episodio
 
+Esse modo usa `tkinter`, que normalmente ja vem com o Python no macOS. Nao precisa instalar `pygame`.
+
 ## Treinar PPO
 
 Treino rapido com observacao por estado:
