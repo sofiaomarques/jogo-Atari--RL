@@ -102,5 +102,9 @@ O projeto ainda tem um script opcional para Stable-Baselines3:
 python3 -m pip install gymnasium stable-baselines3
 python3 scripts/train_ppo.py --obs state --timesteps 100000
 ```
+PRA TESTAR!!!!!
+
+cd "/Users/sofiadeoliveiramarques/projetos pessoais/jogo atari- aprendizadoo por reforco"
+python3 scripts/watch_trained_agent.py
 
 Mas para o seu caso, comece por `train_q_learning.py`, que e mais simples e ja salva uma politica treinada.
