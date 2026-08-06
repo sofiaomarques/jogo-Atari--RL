@@ -26,7 +26,7 @@ def main() -> None:
     except ModuleNotFoundError as exc:
         raise SystemExit(
             "Stable-Baselines3 is required for training. "
-            "Install dependencies with: pip install -r requirements.txt"
+            "Install optional dependencies with: pip install gymnasium stable-baselines3"
         ) from exc
 
     def make_env() -> Monitor:

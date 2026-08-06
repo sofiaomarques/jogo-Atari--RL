@@ -18,11 +18,6 @@ ACTIONS: dict[int, str] = {
     0: "noop",
     1: "left",
     2: "right",
-    3: "up",
-    4: "down",
-    5: "fire",
-    6: "left_fire",
-    7: "right_fire",
 }
 
 
@@ -75,7 +70,7 @@ class AtariDodgeEnv(BaseEnv):
             self.observation_space = spaces.Box(
                 low=-1.0,
                 high=1.5,
-                shape=(16,),
+                shape=(8,),
                 dtype=np.float32,
             )
 
@@ -109,7 +104,10 @@ class AtariDodgeEnv(BaseEnv):
         if self.render_mode == "rgb_array":
             return frame
         if self.render_mode == "human":
-            self._render_human(frame)
+            raise RuntimeError(
+                "Use scripts/play.py or scripts/watch_trained_agent.py for visual mode. "
+                "They use tkinter and do not require pygame."
+            )
         return None
 
     def close(self) -> None:
@@ -125,34 +123,3 @@ class AtariDodgeEnv(BaseEnv):
         if self.obs_mode == "rgb":
             return self.game.render_rgb()
         return self.game.state_vector()
-
-    def _render_human(self, frame: np.ndarray) -> None:
-        if self._pygame is None:
-            try:
-                import pygame
-            except ModuleNotFoundError as exc:
-                raise RuntimeError(
-                    "pygame is required for render_mode='human'. "
-                    "Install it with: pip install pygame"
-                ) from exc
-
-            self._pygame = pygame
-            pygame.init()
-            cfg = self.game.config
-            self._screen = pygame.display.set_mode(
-                (cfg.width * self._scale, cfg.height * self._scale)
-            )
-            pygame.display.set_caption("Neon Intercept RL")
-            self._clock = pygame.time.Clock()
-
-        surf = self._pygame.surfarray.make_surface(np.transpose(frame, (1, 0, 2)))
-        surf = self._pygame.transform.scale(
-            surf,
-            (
-                self.game.config.width * self._scale,
-                self.game.config.height * self._scale,
-            ),
-        )
-        self._screen.blit(surf, (0, 0))
-        self._pygame.display.flip()
-        self._clock.tick(self.metadata["render_fps"])

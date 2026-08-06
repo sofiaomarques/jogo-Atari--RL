@@ -30,9 +30,10 @@ class AtariDodgeEnvTest(unittest.TestCase):
 
         obs_a, _ = env_a.reset(seed=42)
         obs_b, _ = env_b.reset(seed=42)
+        self.assertEqual(obs_a.shape, (8,))
         np.testing.assert_allclose(obs_a, obs_b)
 
-        actions = [0, 1, 5, 2, 7, 0, 3]
+        actions = [0, 1, 2, 2, 0, 1, 0]
         for action in actions:
             obs_a, rew_a, done_a, trunc_a, _ = env_a.step(action)
             obs_b, rew_b, done_b, trunc_b, _ = env_b.step(action)

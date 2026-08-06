@@ -19,10 +19,10 @@ def main() -> None:
     parser.add_argument("--render", action="store_true")
     args = parser.parse_args()
 
-    env = AtariDodgeEnv(
-        obs_mode=args.obs,
-        render_mode="human" if args.render else None,
-    )
+    if args.render:
+        raise SystemExit("Para ver o jogo na tela, use: python3 scripts/play.py")
+
+    env = AtariDodgeEnv(obs_mode=args.obs)
 
     try:
         for episode in range(args.episodes):
@@ -34,13 +34,11 @@ def main() -> None:
                 action = env.action_space.sample()
                 _, reward, terminated, truncated, info = env.step(action)
                 total_reward += reward
-                if args.render:
-                    env.render()
-
             print(
                 f"episode={episode + 1} "
                 f"reward={total_reward:.2f} "
                 f"score={info['score']} "
+                f"hits={info['hits']} "
                 f"steps={info['steps']} "
                 f"lives={info['lives']}"
             )

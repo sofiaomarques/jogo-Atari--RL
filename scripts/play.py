@@ -10,10 +10,11 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from atari_rl_game.game import NeonInterceptGame
+from atari_rl_game.tk_renderer import draw_game
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Play Neon Intercept with the keyboard.")
+    parser = argparse.ArgumentParser(description="Play the Atari paddle-ball game.")
     parser.add_argument("--seed", type=int, default=None)
     args = parser.parse_args()
 
@@ -23,7 +24,7 @@ def main() -> None:
     pressed: set[str] = set()
 
     root = tk.Tk()
-    root.title("Neon Intercept RL")
+    root.title("Atari Paddle RL")
     root.resizable(False, False)
 
     cfg = game.config
@@ -56,81 +57,21 @@ def main() -> None:
         pressed.discard(event.keysym.lower())
 
     def action_from_keys() -> int:
-        fire = "space" in pressed
         if "left" in pressed:
-            return 6 if fire else 1
+            return 1
         if "right" in pressed:
-            return 7 if fire else 2
-        if "up" in pressed:
-            return 3
-        if "down" in pressed:
-            return 4
-        return 5 if fire else 0
-
-    def rect(x: float, y: float, w: float, h: float, color: str) -> None:
-        canvas.create_rectangle(
-            x * scale,
-            y * scale,
-            (x + w) * scale,
-            (y + h) * scale,
-            fill=color,
-            outline=color,
-        )
-
-    def draw() -> None:
-        canvas.delete("all")
-        rect(0, 0, cfg.width, cfg.height, "#04050e")
-
-        star_offset = game.steps % cfg.height
-        for x, y, speed in game.stars:
-            yy = (int(y) + star_offset * int(speed)) % cfg.height
-            shade = 35 + int(speed) * 32
-            color = f"#{shade:02x}{shade:02x}{shade:02x}"
-            rect(int(x), yy, 1, 1, color)
-
-        rect(0, 0, cfg.width, 7, "#0c1222")
-        for idx in range(game.lives):
-            rect(4 + idx * 8, 2, 5, 3, "#3cff78")
-
-        cooldown_width = int((1 - game.cooldown / cfg.fire_cooldown) * 26)
-        rect(cfg.width - 32, 2, 26, 3, "#2d2d46")
-        rect(cfg.width - 32, 2, cooldown_width, 3, "#ffe65a")
-
-        for ent in game.energy:
-            rect(ent.x, ent.y, ent.w, ent.h, "#00e6b4")
-            rect(ent.x + 2, ent.y + 2, ent.w - 4, ent.h - 4, "#e6ff5a")
-        for ent in game.meteors:
-            rect(ent.x, ent.y, ent.w, ent.h, "#dc402a")
-            rect(ent.x + 2, ent.y + 1, max(1, ent.w - 4), 2, "#ffaa40")
-        for ent in game.enemies:
-            rect(ent.x, ent.y, ent.w, ent.h, "#aa46ff")
-            rect(ent.x + 2, ent.y + ent.h - 3, ent.w - 4, 2, "#46f5ff")
-        for ent in game.bullets:
-            rect(ent.x, ent.y, ent.w, ent.h, "#ffec52")
-
-        p = game.player
-        rect(p.x + 2, p.y, p.w - 4, 2, "#b4ffff")
-        rect(p.x + 1, p.y + 2, p.w - 2, 4, "#26cdff")
-        rect(p.x, p.y + 5, p.w, 3, "#28ff78")
-
-        if terminated or truncated:
-            canvas.create_text(
-                cfg.width * scale / 2,
-                cfg.height * scale / 2,
-                text="FIM - aperte R",
-                fill="#ffffff",
-                font=("Menlo", 20, "bold"),
-            )
-
-        root.title(
-            f"Neon Intercept RL | score {game.score} | vidas {game.lives} | passos {game.steps}"
-        )
+            return 2
+        return 0
 
     def tick() -> None:
         nonlocal terminated, truncated
         if not (terminated or truncated):
             _, terminated, truncated, _ = game.step(action_from_keys())
-        draw()
+        overlay = "FIM - aperte R" if terminated or truncated else None
+        draw_game(canvas, game, scale=scale, overlay=overlay)
+        root.title(
+            f"Atari Paddle RL | score {game.score} | vidas {game.lives} | rebatidas {game.hits}"
+        )
         root.after(33, tick)
 
     root.bind("<KeyPress>", key_down)
