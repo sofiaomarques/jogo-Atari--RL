@@ -39,6 +39,12 @@ def draw_game(
     streak_width = int(min(game.streak, 20) / 20 * 42)
     rect(cfg.width - 48, 2, 42, 3, "#2d2d46")
     rect(cfg.width - 48, 2, streak_width, 3, "#ffe65a")
+    palette = ("#ff5966", "#ff9642", "#ffe05c", "#66eb84", "#4ebaff")
+    for brick in game.bricks:
+        row = int((brick.y - cfg.brick_top) // (cfg.brick_height + cfg.brick_gap))
+        color = palette[row % len(palette)]
+        rect(brick.x, brick.y, brick.w, brick.h, color)
+        rect(brick.x + 1, brick.y + 1, brick.w - 2, 1, "#ffffff")
     rect(0, game.paddle.y + game.paddle.h + 7, cfg.width, 1, "#192236")
     rect(game.paddle.x, game.paddle.y, game.paddle.w, game.paddle.h, "#28ff78")
     rect(game.paddle.x + 2, game.paddle.y - 1, game.paddle.w - 4, 2, "#b4ffff")

@@ -28,7 +28,7 @@ def run_episode(
     seed: int,
     epsilon: float,
     train: bool,
-) -> tuple[float, int, int, int]:
+) -> tuple[float, int, int, int, int]:
     observation, info = env.reset(seed=seed)
     total_reward = 0.0
     terminated = truncated = False
@@ -47,7 +47,13 @@ def run_episode(
         observation = next_observation
         total_reward += reward
 
-    return total_reward, int(info["score"]), int(info["hits"]), int(info["steps"])
+    return (
+        total_reward,
+        int(info["score"]),
+        int(info["hits"]),
+        int(info["blocks_destroyed"]),
+        int(info["steps"]),
+    )
 
 
 def main() -> None:
@@ -70,6 +76,7 @@ def main() -> None:
 
     recent_scores: list[int] = []
     recent_hits: list[int] = []
+    recent_blocks: list[int] = []
     best_hits = 0
 
     for episode in range(1, args.episodes + 1):
@@ -79,7 +86,7 @@ def main() -> None:
             args.epsilon_start,
             args.epsilon_end,
         )
-        reward, score, hits, steps = run_episode(
+        reward, score, hits, blocks, steps = run_episode(
             env,
             agent,
             seed=args.seed + episode,
@@ -88,8 +95,10 @@ def main() -> None:
         )
         recent_scores.append(score)
         recent_hits.append(hits)
+        recent_blocks.append(blocks)
         recent_scores = recent_scores[-args.report_every :]
         recent_hits = recent_hits[-args.report_every :]
+        recent_blocks = recent_blocks[-args.report_every :]
         best_hits = max(best_hits, hits)
 
         if episode == 1 or episode % args.report_every == 0 or episode == args.episodes:
@@ -98,6 +107,7 @@ def main() -> None:
                 f"exploracao={epsilon:.3f} "
                 f"media_pontos={np.mean(recent_scores):7.1f} "
                 f"media_rebatidas={np.mean(recent_hits):6.1f} "
+                f"media_blocos={np.mean(recent_blocks):6.1f} "
                 f"rebatidas={hits:4d} "
                 f"melhor={best_hits:4d} "
                 f"passos={steps:4d} "
@@ -111,8 +121,9 @@ def main() -> None:
     if args.eval_episodes > 0:
         scores = []
         hits_list = []
+        blocks_list = []
         for idx in range(args.eval_episodes):
-            _, score, hits, _ = run_episode(
+            _, score, hits, blocks, _ = run_episode(
                 env,
                 agent,
                 seed=args.seed + 10_000 + idx,
@@ -121,11 +132,13 @@ def main() -> None:
             )
             scores.append(score)
             hits_list.append(hits)
+            blocks_list.append(blocks)
 
         print(
             "Avaliacao sem exploracao: "
             f"pontos_medios={np.mean(scores):.1f} "
             f"rebatidas_medias={np.mean(hits_list):.1f} "
+            f"blocos_medios={np.mean(blocks_list):.1f} "
             f"melhor_rebatidas={np.max(hits_list):.0f}"
         )
 

@@ -17,6 +17,12 @@ class GameConfig:
     ball_size: int = 5
     ball_speed_x: float = 2.5
     ball_speed_y: float = 3.2
+    brick_rows: int = 5
+    brick_columns: int = 10
+    brick_height: int = 7
+    brick_gap: int = 2
+    brick_top: int = 16
+    brick_side_margin: int = 6
     max_steps: int = 5_000
     starting_lives: int = 3
 
@@ -62,7 +68,7 @@ def intersects(a: Entity, b: Entity) -> bool:
 
 
 class NeonInterceptGame:
-    """Paddle-ball Atari-style game tuned for reinforcement learning."""
+    """Breakout-style game tuned for reinforcement learning."""
 
     def __init__(self, config: GameConfig | None = None) -> None:
         self.config = config or GameConfig()
@@ -89,6 +95,8 @@ class NeonInterceptGame:
         self.score = 0
         self.lives = cfg.starting_lives
         self.hits = 0
+        self.blocks_destroyed = 0
+        self.level = 1
         self.misses = 0
         self.streak = 0
         self.done = False
@@ -99,6 +107,7 @@ class NeonInterceptGame:
                 self.rng.integers(1, 3, size=32),
             )
         ).astype(np.int16)
+        self.bricks = self._create_bricks()
         self._serve_ball(toward_paddle=True)
         return self.info()
 
@@ -108,6 +117,9 @@ class NeonInterceptGame:
             "lives": int(self.lives),
             "steps": int(self.steps),
             "hits": int(self.hits),
+            "blocks_destroyed": int(self.blocks_destroyed),
+            "bricks_remaining": int(len(self.bricks)),
+            "level": int(self.level),
             "misses": int(self.misses),
             "streak": int(self.streak),
             "ball_x": float(self.ball.x),
@@ -134,6 +146,8 @@ class NeonInterceptGame:
             np.clip(self.paddle.x + self.paddle.vx, 2, cfg.width - self.paddle.w - 2)
         )
 
+        previous_x = self.ball.x
+        previous_y = self.ball.y
         self.ball.x += self.ball.vx
         self.ball.y += self.ball.vy
         reward = 0.01
@@ -152,6 +166,10 @@ class NeonInterceptGame:
             self.ball.vy = abs(self.ball.vy)
             reward += 0.05
 
+        brick = next((brick for brick in self.bricks if intersects(self.ball, brick)), None)
+        if brick is not None:
+            reward += self._bounce_from_brick(brick, previous_x, previous_y)
+
         if self.ball.vy > 0 and intersects(self.ball, self.paddle):
             reward += self._bounce_from_paddle()
 
@@ -162,6 +180,13 @@ class NeonInterceptGame:
             reward -= 8.0
             if self.lives > 0:
                 self._serve_ball(toward_paddle=True)
+
+        if not self.bricks:
+            self.level += 1
+            self.bricks = self._create_bricks()
+            self.score += 100 * self.level
+            reward += 25.0
+            self._serve_ball(toward_paddle=False)
 
         new_target_distance = self._target_distance()
         reward += 0.15 * (old_target_distance - new_target_distance)
@@ -228,6 +253,10 @@ class NeonInterceptGame:
 
         self._draw_hud(frame)
         self._rect_xy(frame, 0, self.paddle.y + self.paddle.h + 7, cfg.width, 1, (25, 34, 54))
+        for brick in self.bricks:
+            color = self._brick_color(brick)
+            self._rect(frame, brick, color)
+            self._rect_xy(frame, brick.x + 1, brick.y + 1, brick.w - 2, 1, (255, 255, 255))
         self._rect(frame, self.paddle, (40, 255, 120))
         self._rect_xy(
             frame,
@@ -269,6 +298,34 @@ class NeonInterceptGame:
         self.score += 10 + min(self.streak, 10)
         return 5.0 + min(self.streak, 10) * 0.3
 
+    def _bounce_from_brick(
+        self, brick: Entity, previous_x: float, previous_y: float
+    ) -> float:
+        """Remove a brick and reflect the ball using the collision side."""
+        cfg = self.config
+        hit_from_top = previous_y + self.ball.h <= brick.top
+        hit_from_bottom = previous_y >= brick.bottom
+
+        if hit_from_top:
+            self.ball.y = brick.top - self.ball.h - 0.1
+            self.ball.vy = -abs(self.ball.vy)
+        elif hit_from_bottom:
+            self.ball.y = brick.bottom + 0.1
+            self.ball.vy = abs(self.ball.vy)
+        elif previous_x + self.ball.w <= brick.left:
+            self.ball.x = brick.left - self.ball.w - 0.1
+            self.ball.vx = -abs(self.ball.vx)
+        else:
+            self.ball.x = brick.right + 0.1
+            self.ball.vx = abs(self.ball.vx)
+
+        self.bricks.remove(brick)
+        self.blocks_destroyed += 1
+        row = int((brick.y - cfg.brick_top) // (cfg.brick_height + cfg.brick_gap))
+        points = 10 + (cfg.brick_rows - row) * 5
+        self.score += points
+        return 3.0 + (cfg.brick_rows - row) * 0.15
+
     def _serve_ball(self, toward_paddle: bool) -> None:
         cfg = self.config
         self.ball.x = float(self.rng.integers(20, cfg.width - 20))
@@ -280,6 +337,32 @@ class NeonInterceptGame:
 
     def _target_distance(self) -> float:
         return abs(self.predicted_landing_x() - self.paddle.center_x) / self.config.width
+
+    def _create_bricks(self) -> list[Entity]:
+        cfg = self.config
+        usable_width = cfg.width - cfg.brick_side_margin * 2
+        brick_width = (usable_width - (cfg.brick_columns - 1) * cfg.brick_gap) // cfg.brick_columns
+        total_width = cfg.brick_columns * brick_width + (cfg.brick_columns - 1) * cfg.brick_gap
+        start_x = (cfg.width - total_width) / 2
+        bricks: list[Entity] = []
+        for row in range(cfg.brick_rows):
+            y = cfg.brick_top + row * (cfg.brick_height + cfg.brick_gap)
+            for column in range(cfg.brick_columns):
+                x = start_x + column * (brick_width + cfg.brick_gap)
+                bricks.append(Entity(x, y, brick_width, cfg.brick_height, 0.0, 0.0, "brick"))
+        return bricks
+
+    def _brick_color(self, brick: Entity) -> tuple[int, int, int]:
+        palette = (
+            (255, 89, 102),
+            (255, 150, 66),
+            (255, 224, 92),
+            (102, 235, 132),
+            (78, 186, 255),
+        )
+        cfg = self.config
+        row = int((brick.y - cfg.brick_top) // (cfg.brick_height + cfg.brick_gap))
+        return palette[row % len(palette)]
 
     def _draw_hud(self, frame: np.ndarray) -> None:
         cfg = self.config

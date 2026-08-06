@@ -1,8 +1,8 @@
 # Atari Paddle RL
 
-Um jogo estilo Atari em que um agente aprende sozinho a mover uma raquete para nao deixar a bola cair.
+Um jogo estilo Atari, inspirado em Breakout, em que um agente aprende sozinho a mover uma raquete para nao deixar a bola cair e destruir os blocos no topo da tela.
 
-O objetivo do modelo e maximizar pontos. Cada vez que a raquete rebate a bola, o agente ganha pontos e recompensa. Quando deixa a bola cair, perde vida e recebe uma penalidade grande.
+O objetivo do modelo e maximizar pontos. Cada vez que a raquete rebate a bola ou a bola destroi um bloco, o agente ganha pontos e recompensa. Quando deixa a bola cair, perde vida e recebe uma penalidade grande. Ao limpar todos os blocos, uma nova fase com blocos aparece.
 
 ## Como rodar
 
@@ -85,7 +85,7 @@ Recompensas principais:
 
 - recompensa pequena por sobreviver;
 - recompensa por se aproximar do ponto de queda da bola;
-- recompensa alta ao rebater a bola;
+- recompensa alta ao rebater a bola e destruir blocos;
 - penalidade alta ao deixar a bola cair.
 
 ## Testes

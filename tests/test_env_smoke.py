@@ -48,6 +48,23 @@ class AtariDodgeEnvTest(unittest.TestCase):
         for action in ACTIONS:
             self.assertTrue(env.action_space.contains(action))
 
+    def test_hitting_a_brick_removes_it_and_awards_points(self) -> None:
+        env = AtariDodgeEnv(obs_mode="state")
+        env.reset(seed=7)
+        game = env.game
+        brick = game.bricks[0]
+        game.ball.x = brick.x + 2
+        game.ball.y = brick.y - game.ball.h - 0.5
+        game.ball.vx = 0.0
+        game.ball.vy = 2.0
+
+        _, reward, _, _, info = env.step(0)
+
+        self.assertGreater(reward, 2.0)
+        self.assertEqual(info["blocks_destroyed"], 1)
+        self.assertEqual(info["bricks_remaining"], 49)
+        self.assertGreater(info["score"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()
